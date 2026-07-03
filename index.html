@@ -3,806 +3,321 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ani-Sync | TV Control</title>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart TV OTT Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Noto+Serif:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap');
-
-        :root {
-            var(--primary): #8a2be2;
-            var(--primary-light): #a450eb;
-            var(--primary-gradient): linear-gradient(135deg, #8a2be2, #5c00d2);
-            var(--bg): #09090b;
-            var(--surface): #18181b;
-            var(--surface-light): #27272a;
-            var(--surface-glass): rgba(24, 24, 27, 0.75);
-            var(--text): #f4f4f5;
-            var(--text-dim): #a1a1aa;
-            var(--border): rgba(255, 255, 255, 0.08);
-            
-            var(--danger): #ef4444;
-            var(--success): #10b981;
-            var(--warning): #f59e0b;
-            
-            /* Dimensions */
-            var(--nav-height): 80px;
-            var(--header-height): 60px;
-            var(--radius-sm): 12px;
-            var(--radius-md): 16px;
-            var(--radius-lg): 24px;
-            var(--radius-pill): 9999px;
-
-            /* Subtitles */
-            var(--sub-size): 24px; /* Larger default for TV */
-            var(--sub-pos): 0px;
-            var(--sub-weight): 600;
-            var(--sub-shadow): 2px 2px 4px rgba(0,0,0,0.8);
-            var(--sub-bg): rgba(0,0,0,0.6);
-            var(--sub-color): #ffffff;
-            var(--sub-font): 'Outfit', sans-serif;
-            
-            /* Plyr Theme */
-            var(--plyr-color-main): #8a2be2;
-            var(--plyr-video-background): #000;
-        }
-
-        /* TV SPECIFIC: Hide the cursor globally */
-        * { 
-            box-sizing: border-box; 
-            -webkit-tap-highlight-color: transparent; 
-            outline: none; 
-            margin: 0; 
-            padding: 0;
-            cursor: none !important; 
-        }
-
-        /* TV SPECIFIC: 10-foot UI Focus States */
-        :focus {
-            outline: 4px solid #8a2be2 !important;
-            outline-offset: 2px !important;
-            box-shadow: 0 0 20px rgba(138, 43, 226, 0.8) !important;
-            transition: transform 0.2s ease, outline 0.1s ease, box-shadow 0.1s ease;
-            transform: scale(1.02);
-            z-index: 100;
-            position: relative;
-        }
-
-        ::-webkit-scrollbar { display: none; }
-        html { scrollbar-width: none; }
-
+        /* TV UI Specific Resets and Styles */
         body {
-            font-family: 'Outfit', sans-serif;
-            background-color: #09090b;
-            color: #f4f4f5;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            -webkit-font-smoothing: antialiased;
+            margin: 0;
+            padding: 0;
+            background-color: #141414;
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Prevent native scrolling, handle it via transforms */
+            user-select: none; /* Prevent text selection on TV */
         }
 
-        /* --- APP HEADER --- */
-        #top-app-bar {
-            position: fixed;
-            top: 0; left: 0; right: 0;
+        /* Hide scrollbars completely for TV apps */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Hero Image Gradient Fades */
+        .hero-gradient-bottom {
+            background: linear-gradient(to top, #141414 0%, rgba(20,20,20,0.4) 50%, transparent 100%);
+        }
+        .hero-gradient-right {
+            background: linear-gradient(to right, #141414 0%, rgba(20,20,20,0.8) 40%, transparent 100%);
+        }
+
+        /* Smooth UI Transitions */
+        .row-container {
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .row-track {
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .item-card {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0.6;
+        }
+        
+        /* The Focused State (What the user is currently selecting) */
+        .item-card.focused {
+            transform: scale(1.15);
+            opacity: 1;
+            z-index: 50;
+            border: 4px solid white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+            border-radius: 0.5rem;
+        }
+
+        /* Spinner for video player */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #E50914;
+            border-radius: 50%;
+            width: 60px;
             height: 60px;
-            background: rgba(24, 24, 27, 0.75);
-            backdrop-filter: blur(20px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            transform: translateY(-100%);
-            transition: transform 0.3s ease;
+            animation: spin 1s linear infinite;
         }
-        #top-app-bar.visible { transform: translateY(0); }
-        #top-app-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.5px; }
-
-        /* --- SUBTITLES --- */
-        .plyr__caption {
-            font-size: var(--sub-size) !important;
-            font-weight: var(--sub-weight) !important;
-            text-shadow: var(--sub-shadow) !important;
-            transform: translateY(var(--sub-pos)) !important;
-            color: var(--sub-color) !important;
-            font-family: var(--sub-font) !important;
-        }
-        .plyr__caption span { background: var(--sub-bg) !important; border-radius: 6px; padding: 4px 8px; }
-
-        /* --- AUTH SCREEN --- */
-        #auth-screen {
-            position: fixed; inset: 0; z-index: 9999;
-            background: radial-gradient(circle at top, #1a1a2e 0%, #09090b 100%);
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column;
-        }
-        .auth-logo {
-            font-size: 4rem; font-weight: 800;
-            background: linear-gradient(135deg, #8a2be2, #5c00d2);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 5px; letter-spacing: -1px;
-        }
-
-        /* --- PIN PAD --- */
-        #pin-overlay {
-            position: fixed; inset: 0; z-index: 5000;
-            background: rgba(9, 9, 11, 0.95); backdrop-filter: blur(15px);
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-        }
-        #pin-overlay.active { display: flex; animation: fadeScale 0.3s; }
-        @keyframes fadeScale { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
-        
-        .pin-dots { display: flex; gap: 20px; margin-bottom: 50px; }
-        .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #27272a; }
-        .pin-dot.filled { background: #f4f4f5; border-color: #f4f4f5; transform: scale(1.2); }
-        .pin-dot.error { border-color: #ef4444; background: #ef4444; animation: shake 0.4s; }
-
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; width: 100%; max-width: 350px; }
-        .num-btn {
-            background: #27272a; color: #f4f4f5; font-size: 2rem; font-weight: 500; height: 90px; width: 90px; 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;
-        }
-        .num-btn:focus { transform: scale(1.15); background: #8a2be2; outline: none !important;}
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
-
-        /* --- NAVIGATION --- */
-        nav {
-            position: fixed; bottom: 0; width: 100%; height: 80px;
-            background: rgba(24, 24, 27, 0.75); backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
-        }
-        .nav-item {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #a1a1aa; font-size: 0.8rem; font-weight: 500; gap: 6px; 
-            width: 80px; height: 60px; border-radius: 12px;
-        }
-        .nav-item.active { color: #a450eb; }
-        .nav-item:focus { outline: none !important; background: rgba(138, 43, 226, 0.2); transform: translateY(-5px) scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.3);}
-
-        /* --- MAIN CONTENT --- */
-        main { flex: 1; padding: 30px; padding-top: 80px; padding-bottom: 100px; overflow-y: auto; }
-        .tab-content { display: none; opacity: 0; }
-        .tab-content.active { display: block; opacity: 1; animation: tabEnter 0.4s forwards; }
-        @keyframes tabEnter { to { opacity: 1; transform: translateY(0); } }
-
-        h2 { font-size: 2rem; font-weight: 700; margin-bottom: 20px; }
-        h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 10px; }
-
-        .glass-card { background: #18181b; border-radius: 24px; padding: 30px; margin-bottom: 25px; border: 1px solid rgba(255, 255, 255, 0.08); }
-        
-        .list-tile {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 20px; background: #27272a; border-radius: 16px; margin-bottom: 15px; border: 2px solid transparent;
-        }
-        .list-tile:focus { border-color: #8a2be2; transform: scale(1.02); }
-        .list-tile-info { display: flex; flex-direction: column; gap: 4px; }
-        .list-tile-title { font-weight: 600; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;}
-
-        input, select {
-            width: 100%; background: #27272a; border: 2px solid rgba(255, 255, 255, 0.08);
-            padding: 20px; border-radius: 12px; color: white; margin-bottom: 20px;
-            font-size: 1.2rem; font-family: inherit;
-        }
-        
-        button {
-            width: 100%; padding: 20px; border-radius: 12px; border: none;
-            font-weight: 700; font-size: 1.2rem; display: flex; align-items: center;
-            justify-content: center; gap: 10px;
-        }
-        .btn-primary { background: linear-gradient(135deg, #8a2be2, #5c00d2); color: white; }
-        .btn-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 2px solid rgba(239, 68, 68, 0.3); }
-        .btn-success { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 2px solid rgba(16, 185, 129, 0.3); }
-        .btn-ghost { background: transparent; color: #a1a1aa; border: 2px solid #27272a; }
-        .btn-sm { width: auto; padding: 10px 20px; font-size: 1rem; border-radius: 8px; margin-left: 10px; }
-        
-        .hidden { display: none !important; }
-        .empty-placeholder { text-align: center; padding: 80px 20px; color: #a1a1aa; font-size: 1.2rem; }
-
-        /* --- THEATER MODE --- */
-        #player-wrapper {
-            width: 100%; background: #000; border-radius: 16px; overflow: hidden;
-            border: 2px solid transparent; transition: border 0.3s;
-        }
-        #player-wrapper:focus-within { border-color: #8a2be2; outline: none !important; box-shadow: 0 0 30px rgba(138, 43, 226, 0.5); transform: scale(1.01);}
-        
-        .badge { background: #8a2be2; color: white; padding: 6px 12px; border-radius: 999px; font-size: 0.9rem; font-weight: 600;}
-        .badge-admin { background: #f59e0b; color: #000; }
-        .badge-host { background: #10b981; color: #000; }
-
-        /* --- CHAT DRAWER --- */
-        #chat-drawer {
-            position: fixed; top: 0; right: -100%; width: 100%; max-width: 450px; height: 100%;
-            background: #09090b; z-index: 2000; transition: transform 0.4s;
-            transform: translateX(100%); display: flex; flex-direction: column;
-            box-shadow: -10px 0 40px rgba(0,0,0,0.8);
-        }
-        #chat-drawer.open { transform: translateX(0); right: 0; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-        .chat-bubble { padding: 15px 20px; border-radius: 18px; font-size: 1.1rem; max-width: 80%; }
-        .chat-row.mine .chat-bubble { background: linear-gradient(135deg, #8a2be2, #5c00d2); color: white; margin-left: auto;}
-        .chat-row.others .chat-bubble { background: #27272a; color: white; margin-right: auto;}
-
-        /* --- MODALS --- */
-        #modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000;
-            display: none; align-items: center; justify-content: center;
-        }
-        .modal-card {
-            background: #18181b; border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 24px; padding: 40px; width: 100%; max-width: 500px;
-        }
-        
-        /* Plyr TV Overrides */
-        .viewer-mode .plyr__controls [data-plyr="play"],
-        .viewer-mode .plyr__controls [data-plyr="pause"],
-        .viewer-mode .plyr__progress,
-        .viewer-mode .plyr__menu { display: none !important; }
-        .viewer-mode .plyr__time { display: block !important; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <header id="top-app-bar"><h1 id="top-app-title">Lobby</h1></header>
-
-    <div id="modal-overlay">
-        <div class="modal-card" id="modal-content"></div>
-    </div>
-
-    <!-- PIN Pad -->
-    <div id="pin-overlay">
-        <i data-lucide="lock" size="64" style="color:#f4f4f5; margin-bottom: 20px;"></i>
-        <h2 style="margin-bottom: 10px;">Enter PIN</h2>
-        <div class="pin-dots" id="pin-dots">
-            <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    <!-- HERO SECTION -->
+    <div id="hero" class="relative w-full h-[65vh] transition-all duration-500 ease-in-out">
+        <div class="absolute inset-0">
+            <img id="hero-img" src="" alt="Hero" class="w-full h-full object-cover opacity-70 transition-opacity duration-500">
+            <div class="absolute inset-0 hero-gradient-right w-[70%]"></div>
+            <div class="absolute inset-0 hero-gradient-bottom"></div>
         </div>
-        <div class="numpad">
-            <div class="num-btn" tabindex="0" data-val="1">1</div><div class="num-btn" tabindex="0" data-val="2">2</div><div class="num-btn" tabindex="0" data-val="3">3</div>
-            <div class="num-btn" tabindex="0" data-val="4">4</div><div class="num-btn" tabindex="0" data-val="5">5</div><div class="num-btn" tabindex="0" data-val="6">6</div>
-            <div class="num-btn" tabindex="0" data-val="7">7</div><div class="num-btn" tabindex="0" data-val="8">8</div><div class="num-btn" tabindex="0" data-val="9">9</div>
-            <div class="num-btn" tabindex="0" data-val="cancel" style="background:transparent;font-size:1.2rem;">Back</div>
-            <div class="num-btn" tabindex="0" data-val="0">0</div>
-            <div class="num-btn" tabindex="0" data-val="del" style="background:transparent;"><i data-lucide="delete"></i></div>
-        </div>
-    </div>
 
-    <!-- Chat -->
-    <div id="chat-drawer">
-        <div style="padding: 20px; background:#18181b; border-bottom: 1px solid #27272a; display:flex; justify-content:space-between;">
-            <h3 style="margin:0;">Room Chat</h3>
-            <button tabindex="0" id="btn-close-chat" style="width:auto; padding:10px 20px;" class="btn-ghost">Close</button>
-        </div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div style="padding: 20px; background:#18181b; display:flex; gap:10px;">
-            <input type="text" id="chat-input" tabindex="0" placeholder="Type a message..." style="margin:0;">
-            <button tabindex="0" id="btn-send-chat" class="btn-primary" style="width:80px;"><i data-lucide="send"></i></button>
-        </div>
-    </div>
-
-    <!-- Auth -->
-    <div id="auth-screen">
-        <div style="width: 100%; max-width: 500px; padding: 25px;">
-            <div class="glass-card" style="padding: 50px 40px; text-align: center;">
-                <div class="auth-logo">Ani-Sync</div>
-                <p style="color: #a1a1aa; font-size: 1.2rem; margin-bottom: 40px;">Synced TV Cinema</p>
-                <input type="email" id="email" tabindex="0" placeholder="Email Address">
-                <input type="password" id="pass" tabindex="0" placeholder="Password">
-                <button id="btn-login" tabindex="0" class="btn-primary" style="margin-bottom: 15px;">Sign In</button>
-                <button id="btn-signup" tabindex="0" class="btn-ghost">Create Account</button>
-                <p id="auth-error" style="color: #ef4444; margin-top:20px; min-height: 20px;"></p>
+        <div class="absolute bottom-[15%] left-[4%] w-[50%] z-10">
+            <h1 id="hero-title" class="text-5xl md:text-7xl font-bold mb-4 drop-shadow-lg tracking-tight">Title</h1>
+            
+            <div class="flex items-center space-x-4 text-sm md:text-base font-semibold mb-4 text-gray-300">
+                <span id="hero-match" class="text-green-500">98% Match</span>
+                <span id="hero-year">2024</span>
+                <span id="hero-rating" class="border border-gray-500 px-1 rounded text-xs">TV-MA</span>
+                <span id="hero-duration">2h 15m</span>
             </div>
-        </div>
-    </div>
 
-    <div id="app-layout" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
-        <main id="main-scroll">
-            <div id="tab-home" class="tab-content active">
-                <h2>Join Room</h2>
-                <div class="glass-card">
-                    <input type="text" id="join-id" tabindex="0" placeholder="Enter Room ID" autocomplete="off">
-                    <button id="btn-join-action" tabindex="0" class="btn-primary"><i data-lucide="log-in"></i> Enter Theater</button>
-                </div>
-                <h2>Create Party</h2>
-                <div class="glass-card">
-                    <input type="text" id="new-name" tabindex="0" placeholder="Party Name">
-                    <input type="text" id="new-url" tabindex="0" placeholder="Video URL (MP4/Drive)">
-                    <input type="text" id="new-sub" tabindex="0" placeholder="Subtitle URL (.vtt) [Optional]">
-                    <select id="new-vis" tabindex="0">
-                        <option value="public">Public Room</option>
-                        <option value="private">Private (PIN Required)</option>
-                    </select>
-                    <div id="pin-input-container" class="hidden">
-                        <input type="tel" id="new-pin" tabindex="0" placeholder="Set 4-Digit PIN" maxlength="4">
-                    </div>
-                    <button id="btn-create-action" tabindex="0" class="btn-primary" style="margin-top:20px;"><i data-lucide="play"></i> Start Hosting</button>
+            <p id="hero-desc" class="text-lg md:text-xl text-gray-200 drop-shadow-md line-clamp-3 max-w-2xl mb-8">
+                Description goes here.
+            </p>
+
+            <div class="flex space-x-4">
+                <div class="flex items-center bg-white text-black px-6 py-2 rounded text-lg font-bold">
+                    <svg class="w-6 h-6 mr-2 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Play
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div id="tab-mine" class="tab-content">
-                <div id="my-rooms-list"><div class="empty-placeholder">Loading...</div></div>
-            </div>
+    <!-- ROWS SECTION -->
+    <div id="app-content" class="relative z-20 pb-20 row-container pl-[4%]">
+        <!-- Rows will be injected here by JavaScript -->
+    </div>
 
-            <div id="tab-explore" class="tab-content">
-                <div id="public-rooms-list"><div class="empty-placeholder">Loading...</div></div>
-            </div>
+    <!-- FULLSCREEN PLAYER OVERLAY -->
+    <div id="player" class="fixed inset-0 bg-black z-[100] hidden flex-col items-center justify-center">
+        <div class="absolute top-8 left-8 bg-white/20 px-4 py-2 rounded text-white font-bold backdrop-blur">
+            Press BACK or ESC to exit
+        </div>
+        <div class="loader mb-6"></div>
+        <h2 id="player-title" class="text-3xl font-light text-white mb-2">Loading Stream...</h2>
+    </div>
 
-            <div id="tab-theater" class="tab-content">
-                <div id="theater-active" class="hidden">
-                    <!-- Tabindex allows selecting the player to capture media keys directly -->
-                    <div id="player-wrapper" tabindex="0">
-                        <video id="v-player" playsinline crossorigin></video>
-                    </div>
-                    
-                    <div class="glass-card" style="margin-top: 25px; padding: 30px;">
-                        <h3 id="room-title">--</h3>
-                        <p id="room-id-label" style="color:#a1a1aa; margin-bottom:15px; font-family:monospace; font-size:1.2rem;"></p>
-                        <div id="role-badge-container" style="display:flex; gap:10px; margin-bottom: 25px;"></div>
-                        
-                        <div style="display:flex; gap: 15px;">
-                            <button id="btn-chat-open" tabindex="0" class="btn-primary"><i data-lucide="message-square"></i> Chat Room</button>
-                            <button id="btn-leave" tabindex="0" class="btn-danger"><i data-lucide="log-out"></i> Leave</button>
+    <!-- REMOTE HINT -->
+    <div class="fixed bottom-6 right-6 flex items-center space-x-2 text-gray-400 z-50 bg-black/80 px-4 py-2 rounded-full border border-gray-800">
+        <span class="text-sm">Use Arrow Keys to navigate, Enter to play</span>
+    </div>
+
+    <script>
+        // --- 1. MOCK DATA GENERATION ---
+        const images = [
+            'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616530940355-351fabd9524b?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80'
+        ];
+
+        const generateItems = (category, count, startId) => {
+            let items = [];
+            for (let i = 0; i < count; i++) {
+                items.push({
+                    id: startId + i,
+                    title: `${category} Movie ${i + 1}`,
+                    description: `This is an amazing ${category} movie. Enjoy the immersive experience right on your Smart TV screen using your D-Pad remote.`,
+                    imageUrl: images[(startId + i) % images.length],
+                    match: Math.floor(Math.random() * 20) + 80,
+                    year: 2020 + Math.floor(Math.random() * 5),
+                    rating: ['TV-MA', 'TV-14', 'PG-13'][Math.floor(Math.random() * 3)],
+                    duration: `${Math.floor(Math.random() * 2) + 1}h ${Math.floor(Math.random() * 59)}m`
+                });
+            }
+            return items;
+        };
+
+        const CATEGORIES = [
+            { title: 'Trending Now', items: generateItems('Trending', 12, 100) },
+            { title: 'Action & Adventure', items: generateItems('Action', 15, 200) },
+            { title: 'Sci-Fi Hits', items: generateItems('Sci-Fi', 10, 300) },
+            { title: 'Comedy Specials', items: generateItems('Comedy', 14, 400) },
+            { title: 'Award Winners', items: generateItems('Drama', 8, 500) }
+        ];
+
+        // --- 2. STATE MANAGEMENT ---
+        let currentRow = 0;
+        let currentCol = 0;
+        let isPlaying = false;
+
+        // Constants for UI calculations
+        const ITEM_WIDTH = 280; // Match w-[280px]
+        const ITEM_MARGIN = 16; // Match space-x-4
+        const ROW_HEIGHT = 200; // Approximate height of a row + margins
+
+        // --- 3. DOM ELEMENTS ---
+        const appContent = document.getElementById('app-content');
+        const heroImg = document.getElementById('hero-img');
+        const heroTitle = document.getElementById('hero-title');
+        const heroDesc = document.getElementById('hero-desc');
+        const heroMatch = document.getElementById('hero-match');
+        const heroYear = document.getElementById('hero-year');
+        const heroRating = document.getElementById('hero-rating');
+        const heroDuration = document.getElementById('hero-duration');
+        const player = document.getElementById('player');
+        const playerTitle = document.getElementById('player-title');
+
+        // --- 4. RENDER UI ---
+        function renderApp() {
+            let html = '';
+            CATEGORIES.forEach((category, rIndex) => {
+                html += `
+                    <div class="mb-10" id="row-wrapper-${rIndex}">
+                        <h2 id="row-title-${rIndex}" class="text-xl md:text-2xl font-bold mb-3 text-gray-400 transition-colors duration-300">${category.title}</h2>
+                        <div class="relative w-full overflow-visible">
+                            <div id="row-track-${rIndex}" class="flex space-x-4 pt-4 pb-8 row-track w-max">
+                `;
+                
+                category.items.forEach((item, cIndex) => {
+                    html += `
+                        <div id="item-${rIndex}-${cIndex}" class="item-card relative flex-none w-[280px] aspect-video bg-gray-800 rounded-md">
+                            <img src="${item.imageUrl}" class="w-full h-full object-cover rounded-md" alt="${item.title}">
                         </div>
-                    </div>
-
-                    <div class="glass-card">
-                        <h4 style="margin-bottom: 20px;">Viewers (<span id="v-count">0</span>)</h4>
-                        <div id="v-list"></div>
-                        <div id="b-list" style="margin-top: 30px;"></div>
-                    </div>
-                </div>
-                <div id="theater-empty" class="empty-placeholder" style="padding-top: 15vh;">
-                    <i data-lucide="tv" size="80" style="opacity:0.5; margin-bottom: 20px;"></i>
-                    <p>Enter a room to start the show.</p>
-                </div>
-            </div>
-
-            <div id="tab-account" class="tab-content">
-                <div class="glass-card" style="text-align:center;">
-                    <h3 id="acc-email" style="margin-bottom: 10px;">--</h3>
-                    <p id="acc-uid" style="color:#a1a1aa; font-family:monospace; margin-bottom: 30px;">--</p>
-                    <button id="btn-logout" tabindex="0" class="btn-danger">Sign Out</button>
-                </div>
-            </div>
-        </main>
-
-        <nav id="app-nav">
-            <div class="nav-item active" tabindex="0" data-tab="home"><i data-lucide="home" size="28"></i><span>Lobby</span></div>
-            <div class="nav-item" tabindex="0" data-tab="explore"><i data-lucide="compass" size="28"></i><span>Explore</span></div>
-            <div class="nav-item" tabindex="0" data-tab="mine"><i data-lucide="library" size="28"></i><span>My Rooms</span></div>
-            <div class="nav-item" tabindex="0" data-tab="theater"><i data-lucide="monitor-play" size="28"></i><span>Theater</span></div>
-            <div class="nav-item" tabindex="0" data-tab="account"><i data-lucide="user" size="28"></i><span>Profile</span></div>
-        </nav>
-    </div>
-
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-        import { getDatabase, ref, set, onValue, update, onDisconnect, remove, get, push, query, limitToLast } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
-
-        // ============== TV SPATIAL NAVIGATION ENGINE ==============
-        const KEYS = {
-            UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39,
-            ENTER: 13, RETURN: 10009, ESC: 27, // Samsung Remote specific keys
-            PLAY: 415, PAUSE: 19, PLAYPAUSE: 10252, FF: 417, RW: 412, STOP: 413
-        };
-
-        function getFocusableElements() {
-            // Find visible elements with tabindex>=0, or inputs/buttons/selects
-            return Array.from(document.querySelectorAll('button, input, select, [tabindex="0"]'))
-                .filter(el => {
-                    const rect = el.getBoundingClientRect();
-                    const style = window.getComputedStyle(el);
-                    return rect.width > 0 && rect.height > 0 && 
-                           style.visibility !== 'hidden' && style.opacity !== '0' &&
-                           !el.closest('.hidden') && !el.closest('[style*="display: none"]');
+                    `;
                 });
+
+                html += `</div></div></div>`;
+            });
+            appContent.innerHTML = html;
+            updateFocus();
         }
 
-        function focusDefault() {
-            const focusable = getFocusableElements();
-            if (focusable.length > 0) {
-                // Prefer elements near the top left or active inputs
-                focusable[0].focus();
-            }
-        }
-
-        function navigateSpatial(directionKey) {
-            const focusable = getFocusableElements();
-            if (focusable.length === 0) return;
-
-            let current = document.activeElement;
-            if (!current || !focusable.includes(current)) {
-                focusDefault();
-                return;
-            }
-
-            const currentRect = current.getBoundingClientRect();
-            let bestMatch = null;
-            let minDistance = Infinity;
-
-            focusable.forEach(el => {
-                if (el === current) return;
-                const rect = el.getBoundingClientRect();
-                
-                let isDirectional = false;
-                const cx1 = currentRect.left + currentRect.width / 2;
-                const cy1 = currentRect.top + currentRect.height / 2;
-                const cx2 = rect.left + rect.width / 2;
-                const cy2 = rect.top + rect.height / 2;
-
-                if (directionKey === KEYS.LEFT && cx2 < cx1) isDirectional = true;
-                if (directionKey === KEYS.RIGHT && cx2 > cx1) isDirectional = true;
-                if (directionKey === KEYS.UP && cy2 < cy1) isDirectional = true;
-                if (directionKey === KEYS.DOWN && cy2 > cy1) isDirectional = true;
-
-                if (isDirectional) {
-                    let distance = Math.sqrt(Math.pow(cx2 - cx1, 2) + Math.pow(cy2 - cy1, 2));
-                    // Penalize off-axis distance to prefer straight lines
-                    if (directionKey === KEYS.LEFT || directionKey === KEYS.RIGHT) {
-                        distance += Math.abs(cy2 - cy1) * 3;
-                    } else {
-                        distance += Math.abs(cx2 - cx1) * 3;
-                    }
-
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        bestMatch = el;
-                    }
-                }
+        // --- 5. UPDATE FOCUS & UI ---
+        function updateFocus() {
+            // Remove previous focus
+            document.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+            
+            // Manage Row Title Colors
+            document.querySelectorAll('h2').forEach(el => {
+                el.classList.remove('text-white');
+                el.classList.add('text-gray-400');
             });
 
-            if (bestMatch) {
-                bestMatch.focus();
-                bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Set new focus
+            const targetItem = document.getElementById(`item-${currentRow}-${currentCol}`);
+            const targetTitle = document.getElementById(`row-title-${currentRow}`);
+            
+            if (targetItem) targetItem.classList.add('focused');
+            if (targetTitle) {
+                targetTitle.classList.remove('text-gray-400');
+                targetTitle.classList.add('text-white');
             }
+
+            // Update Hero Banner
+            const activeData = CATEGORIES[currentRow].items[currentCol];
+            heroImg.style.opacity = '0'; // Fade out
+            
+            setTimeout(() => {
+                heroImg.src = activeData.imageUrl;
+                heroTitle.textContent = activeData.title;
+                heroDesc.textContent = activeData.description;
+                heroMatch.textContent = `${activeData.match}% Match`;
+                heroYear.textContent = activeData.year;
+                heroRating.textContent = activeData.rating;
+                heroDuration.textContent = activeData.duration;
+                heroImg.style.opacity = '0.7'; // Fade in
+            }, 150);
+
+            // Calculate Spatial Scrolling
+            
+            // 1. Horizontal Scroll (Move the track)
+            const track = document.getElementById(`row-track-${currentRow}`);
+            // Move item to the left edge if it's past the first item
+            const xOffset = currentCol > 0 ? (currentCol * (ITEM_WIDTH + ITEM_MARGIN)) - 40 : 0;
+            track.style.transform = `translateX(-${xOffset}px)`;
+
+            // 2. Vertical Scroll (Move the whole content area up)
+            // If we go past the first row, shift everything up so the focused row stays in the center
+            const yOffset = currentRow > 0 ? (currentRow * ROW_HEIGHT) - 50 : 0;
+            appContent.style.transform = `translateY(-${yOffset}px)`;
         }
 
-        document.addEventListener('keydown', function(e) {
-            const k = e.keyCode;
-            
-            // Handle App Navigation & Exit on TV Return button
-            if (k === KEYS.RETURN || k === KEYS.ESC) {
+        // --- 6. HANDLE REMOTE CONTROL (KEYBOARD) EVENTS ---
+        window.addEventListener('keydown', (e) => {
+            const key = e.key;
+            const keyCode = e.keyCode;
+
+            // Samsung Tizen specific 'Return/Back' key code is 10009
+            const isBackKey = key === 'Escape' || key === 'Backspace' || keyCode === 10009;
+
+            if (isPlaying) {
+                if (isBackKey) {
+                    isPlaying = false;
+                    player.classList.add('hidden');
+                    player.classList.remove('flex');
+                    e.preventDefault();
+                }
+                return; // Disable other navigation while playing
+            }
+
+            // Prevent default browser scrolling for arrow keys
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
                 e.preventDefault();
-                if (document.getElementById('modal-overlay').style.display === 'flex') {
-                    window.closeModal();
-                } else if (document.getElementById('pin-overlay').classList.contains('active')) {
-                    window.cancelPin();
-                } else if (document.getElementById('chat-drawer').classList.contains('open')) {
-                    window.toggleChat(false);
-                } else if (curRoomId) {
-                    leaveTheater();
-                } else {
-                    try { tizen.application.getCurrentApplication().exit(); } catch(err) { console.log('Not Tizen'); }
-                }
-                return;
             }
 
-            // Media Control Mapping (Smart TV Hardware Media Keys)
-            if (curRoomId && player) {
-                if (k === KEYS.PLAY || k === KEYS.PLAYPAUSE) { player.play(); e.preventDefault(); return; }
-                if (k === KEYS.PAUSE || k === KEYS.STOP) { player.pause(); e.preventDefault(); return; }
-                if (k === KEYS.FF) { player.forward(10); e.preventDefault(); return; }
-                if (k === KEYS.RW) { player.rewind(10); e.preventDefault(); return; }
-            }
+            let changed = false;
 
-            // Spatial D-PAD Navigation
-            if ([KEYS.UP, KEYS.DOWN, KEYS.LEFT, KEYS.RIGHT].includes(k)) {
-                // If focus is inside a native input, let native left/right text cursor work
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && (k === KEYS.LEFT || k === KEYS.RIGHT)) {
-                    return; 
-                }
-                e.preventDefault();
-                navigateSpatial(k);
-            }
-
-            // Map ENTER key to triggers for custom DIV buttons (Nav, Numpad, List Tiles)
-            if (k === KEYS.ENTER) {
-                const el = document.activeElement;
-                if (el && el.tagName === 'DIV' || el.tagName === 'SPAN' || el.tagName === 'LI') {
-                    if (el.click) { el.click(); e.preventDefault(); }
-                }
-                // Special: If focused on video player wrapper, toggle play/pause
-                if(el && el.id === 'player-wrapper' && player) {
-                    player.playing ? player.pause() : player.play();
-                }
-            }
-        });
-
-        // ================= FIREBASE & APP LOGIC =================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCs8CrRSkSA5Sb6HMSw1KVjrfwzQ8i4sxw",
-            authDomain: "watch2gather-d2ce8.firebaseapp.com",
-            databaseURL: "https://watch2gather-d2ce8-default-rtdb.firebaseio.com",
-            projectId: "watch2gather-d2ce8"
-        };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-
-        let player = new Plyr('#v-player', {
-            controls: ['play', 'progress', 'current-time', 'duration', 'settings'],
-            captions: { active: true, update: true, language: 'auto' },
-            keyboard: { focused: false, global: false } // We handle keyboard natively
-        });
-
-        let curRoomId = null, isHost = false, canControl = false;
-        let roomUnsub = null, chatUnsub = null;
-        let pinAttempt = "", targetPin = "", pendingRoom = null;
-
-        window.openModal = (title, body, actions = null) => {
-            const container = document.getElementById('modal-content');
-            container.innerHTML = `<h3>${title}</h3><p style="margin-bottom:20px; color:#a1a1aa;">${body}</p><div id="m-acts" style="display:flex; flex-direction:column; gap:10px"></div>`;
-            const actDiv = document.getElementById('m-acts');
-            if(actions) {
-                actions.forEach((a, i) => {
-                    const b = document.createElement('button');
-                    b.className = a.primary ? 'btn-primary' : 'btn-ghost';
-                    b.innerText = a.label; b.tabIndex = 0;
-                    b.onclick = () => { if(a.fn) a.fn(); window.closeModal(); };
-                    actDiv.appendChild(b);
-                });
-            } else {
-                const b = document.createElement('button'); b.className='btn-primary'; b.innerText='Okay'; b.tabIndex=0; b.onclick=window.closeModal; actDiv.appendChild(b);
-            }
-            document.getElementById('modal-overlay').style.display = 'flex';
-            setTimeout(() => { if(actDiv.firstChild) actDiv.firstChild.focus(); }, 100); // Focus modal
-        };
-        window.closeModal = () => {
-            document.getElementById('modal-overlay').style.display = 'none';
-            focusDefault();
-        };
-
-        window.goTab = (id) => {
-            document.querySelectorAll('.tab-content, .nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${id}`).classList.add('active');
-            document.querySelector(`.nav-item[data-tab="${id}"]`).classList.add('active');
-            
-            const titles = { 'home': 'Lobby', 'explore': 'Explore', 'mine': 'My Rooms', 'theater': 'Theater', 'account': 'Profile' };
-            document.getElementById('top-app-title').innerText = titles[id];
-            
-            setTimeout(focusDefault, 100); // Refocus element in new tab
-        };
-
-        // UI Listeners setup
-        document.querySelectorAll('.nav-item').forEach(nav => {
-            nav.onclick = () => window.goTab(nav.dataset.tab);
-        });
-
-        document.getElementById('new-vis').addEventListener('change', (e) => {
-            const pinDiv = document.getElementById('pin-input-container');
-            if(e.target.value === 'private') pinDiv.classList.remove('hidden');
-            else { pinDiv.classList.add('hidden'); document.getElementById('new-pin').value = ''; }
-        });
-
-        window.toggleChat = (show) => {
-            const d = document.getElementById('chat-drawer');
-            if(show) {
-                d.classList.add('open');
-                setTimeout(() => document.getElementById('chat-input').focus(), 400);
-            } else {
-                d.classList.remove('open');
-                setTimeout(focusDefault, 400);
-            }
-        };
-        document.getElementById('btn-chat-open').onclick = () => window.toggleChat(true);
-        document.getElementById('btn-close-chat').onclick = () => window.toggleChat(false);
-
-        // PIN Pad logic
-        document.querySelectorAll('.num-btn').forEach(btn => {
-            btn.onclick = () => {
-                const val = btn.dataset.val;
-                if(val === 'cancel') window.cancelPin();
-                else if(val === 'del') {
-                    pinAttempt = pinAttempt.slice(0, -1);
-                    updatePinUI();
-                } else {
-                    if(pinAttempt.length < 4) {
-                        pinAttempt += val;
-                        updatePinUI();
-                        if(pinAttempt.length === 4) setTimeout(verifyPin, 300);
+            switch (key) {
+                case 'ArrowUp':
+                    if (currentRow > 0) {
+                        currentRow--;
+                        changed = true;
                     }
-                }
-            };
-        });
-
-        function updatePinUI() {
-            document.querySelectorAll('.pin-dot').forEach((d, i) => {
-                if(i < pinAttempt.length) d.classList.add('filled');
-                else d.classList.remove('filled', 'error');
-            });
-        }
-        
-        function verifyPin() {
-            if(pinAttempt === targetPin) {
-                document.getElementById('pin-overlay').classList.remove('active');
-                executeJoin(pendingRoom);
-            } else {
-                document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
-                setTimeout(() => { pinAttempt = ""; updatePinUI(); }, 500);
+                    break;
+                case 'ArrowDown':
+                    if (currentRow < CATEGORIES.length - 1) {
+                        currentRow++;
+                        changed = true;
+                    }
+                    break;
+                case 'ArrowLeft':
+                    if (currentCol > 0) {
+                        currentCol--;
+                        changed = true;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (currentCol < CATEGORIES[currentRow].items.length - 1) {
+                        currentCol++;
+                        changed = true;
+                    }
+                    break;
+                case 'Enter':
+                    // Play Video
+                    isPlaying = true;
+                    playerTitle.textContent = `Loading Stream: ${CATEGORIES[currentRow].items[currentCol].title}`;
+                    player.classList.remove('hidden');
+                    player.classList.add('flex');
+                    break;
             }
-        }
 
-        window.cancelPin = () => {
-            document.getElementById('pin-overlay').classList.remove('active');
-            pinAttempt = ""; targetPin = ""; pendingRoom = null;
-            focusDefault();
-        }
-
-        // AUTH
-        onAuthStateChanged(auth, user => {
-            if(user) {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-layout').classList.remove('hidden');
-                document.getElementById('top-app-bar').classList.add('visible');
+            if (changed) {
+                // Ensure column doesn't exceed row length if we jumped to a shorter row
+                const maxCol = CATEGORIES[currentRow].items.length - 1;
+                if (currentCol > maxCol) currentCol = maxCol;
                 
-                document.getElementById('acc-email').innerText = user.email;
-                document.getElementById('acc-uid').innerText = user.uid;
-                window.goTab('home');
-                refreshLobby();
-            } else {
-                document.getElementById('auth-screen').classList.remove('hidden');
-                document.getElementById('app-layout').classList.add('hidden');
-                document.getElementById('top-app-bar').classList.remove('visible');
-                setTimeout(() => document.getElementById('email').focus(), 100);
+                updateFocus();
             }
         });
 
-        document.getElementById('btn-login').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value).catch(e => document.getElementById('auth-error').innerText = e.message);
-        document.getElementById('btn-signup').onclick = () => createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value).catch(e => document.getElementById('auth-error').innerText = e.message);
-        document.getElementById('btn-logout').onclick = () => signOut(auth);
-
-        // ROOM MGMT
-        document.getElementById('btn-create-action').onclick = async () => {
-            const name = document.getElementById('new-name').value || "Theater";
-            let url = document.getElementById('new-url').value;
-            if(!url) return window.openModal("Error", "Video URL is required");
-            
-            // Convert Drive link logic
-            const match = url.match(/(?:\/d\/|id=)([-0-9a-zA-Z_]{15,})/);
-            if(match) url = `https://www.googleapis.com/drive/v3/files/${match[1]}?alt=media&key=AIzaSyC4emNRGnaNpBKnYntT2qcxCBUyB526Y4I`;
-
-            const pin = document.getElementById('new-vis').value === 'private' ? document.getElementById('new-pin').value : null;
-            const rid = Math.random().toString(36).substring(2, 8).toUpperCase();
-            
-            await set(ref(db, `rooms/${rid}`), {
-                name, url, sub: document.getElementById('new-sub').value || null, 
-                pin, isPrivate: !!pin, host: auth.currentUser.uid, playing: true, time: 0
-            });
-            joinRoom(rid);
-        };
-
-        window.joinRoom = async (rid) => {
-            const snap = await get(ref(db, `rooms/${rid}`));
-            if(!snap.exists()) return window.openModal("Error", "Room not found");
-            const data = snap.val();
-            
-            if(data.banned && data.banned[auth.currentUser.uid]) return window.openModal("Error", "You are banned.");
-            
-            if(data.pin && data.host !== auth.currentUser.uid) {
-                targetPin = data.pin; pendingRoom = rid; pinAttempt = "";
-                document.getElementById('pin-overlay').classList.add('active');
-                updatePinUI();
-                setTimeout(() => document.querySelector('.num-btn').focus(), 100);
-            } else {
-                executeJoin(rid);
-            }
-        };
-
-        document.getElementById('btn-join-action').onclick = () => window.joinRoom(document.getElementById('join-id').value);
-
-        function executeJoin(rid) {
-            curRoomId = rid;
-            window.goTab('theater');
-            document.getElementById('theater-active').classList.remove('hidden');
-            document.getElementById('theater-empty').classList.add('hidden');
-            
-            set(ref(db, `rooms/${rid}/viewers/${auth.currentUser.uid}`), { name: auth.currentUser.email.split('@')[0], uid: auth.currentUser.uid });
-            onDisconnect(ref(db, `rooms/${rid}/viewers/${auth.currentUser.uid}`)).remove();
-
-            roomUnsub = onValue(ref(db, `rooms/${rid}`), snap => {
-                const d = snap.val();
-                if(!d || (d.banned && d.banned[auth.currentUser.uid])) return leaveTheater();
-                
-                isHost = d.host === auth.currentUser.uid;
-                canControl = isHost || (d.admins && d.admins[auth.currentUser.uid]);
-                document.getElementById('player-wrapper').className = canControl ? 'host-mode' : 'viewer-mode';
-
-                document.getElementById('room-title').innerText = d.name;
-                document.getElementById('room-id-label').innerText = `ID: ${rid}`;
-                
-                if(player.source !== d.url) {
-                    player.source = { type: 'video', sources: [{ src: d.url }] };
-                    if(d.sub) player.source = { ...player.source, tracks: [{ kind: 'captions', label: 'EN', srclang: 'en', src: d.sub, default: true }] };
-                }
-
-                if(!canControl) {
-                    if(Math.abs(player.currentTime - d.time) > 2) player.currentTime = d.time;
-                    d.playing ? player.play().catch(()=>{}) : player.pause();
-                }
-
-                const viewers = d.viewers ? Object.values(d.viewers) : [];
-                document.getElementById('v-count').innerText = viewers.length;
-                document.getElementById('v-list').innerHTML = viewers.map(v => `
-                    <div class="list-tile" tabindex="0">
-                        <div class="list-tile-info"><span class="list-tile-title">${v.uid === d.host ? '👑' : ''} ${v.name}</span></div>
-                        ${isHost && v.uid !== auth.currentUser.uid ? `<button class="btn-danger btn-sm" onclick="banUser('${v.uid}')" tabindex="0">Ban</button>` : ''}
-                    </div>
-                `).join('');
-            });
-
-            chatUnsub = onValue(query(ref(db, `rooms/${rid}/messages`), limitToLast(30)), snap => {
-                const msgs = snap.val() || {};
-                const c = document.getElementById('chat-messages');
-                c.innerHTML = Object.values(msgs).map(m => `
-                    <div class="chat-row ${m.uid === auth.currentUser.uid ? 'mine' : 'others'}">
-                        <div class="chat-bubble"><b>${m.sender}:</b><br>${m.text}</div>
-                    </div>
-                `).join('');
-                c.scrollTop = c.scrollHeight;
-            });
-            
-            setTimeout(() => document.getElementById('player-wrapper').focus(), 500); // Focus player for media keys
-        }
-
-        window.banUser = (uid) => update(ref(db, `rooms/${curRoomId}/banned`), { [uid]: true });
-
-        document.getElementById('btn-send-chat').onclick = () => {
-            const i = document.getElementById('chat-input');
-            if(i.value) {
-                push(ref(db, `rooms/${curRoomId}/messages`), { text: i.value, uid: auth.currentUser.uid, sender: auth.currentUser.email.split('@')[0] });
-                i.value = ''; i.focus();
-            }
-        };
-
-        player.on('play', () => canControl && update(ref(db, `rooms/${curRoomId}`), { playing: true, time: player.currentTime }));
-        player.on('pause', () => canControl && update(ref(db, `rooms/${curRoomId}`), { playing: false, time: player.currentTime }));
-        player.on('seeked', () => canControl && update(ref(db, `rooms/${curRoomId}`), { time: player.currentTime }));
-
-        function leaveTheater() {
-            if(roomUnsub) roomUnsub();
-            if(chatUnsub) chatUnsub();
-            if(curRoomId) remove(ref(db, `rooms/${curRoomId}/viewers/${auth.currentUser.uid}`));
-            curRoomId = null; player.stop();
-            document.getElementById('theater-active').classList.add('hidden');
-            document.getElementById('theater-empty').classList.remove('hidden');
-            window.goTab('home');
-        }
-        document.getElementById('btn-leave').onclick = leaveTheater;
-
-        window.deleteRoom = async (rid) => {
-            await remove(ref(db, `rooms/${rid}`));
-            if(curRoomId === rid) leaveTheater();
-        };
-
-        function refreshLobby() {
-            onValue(ref(db, 'rooms'), snap => {
-                const rooms = snap.val() || {};
-                let pHTML = '', mHTML = '';
-                Object.entries(rooms).forEach(([id, r]) => {
-                    if(!r.isPrivate) pHTML += `<div class="list-tile" tabindex="0" onclick="joinRoom('${id}')"><div class="list-tile-info"><span class="list-tile-title">${r.name}</span></div><i data-lucide="chevron-right"></i></div>`;
-                    if(r.host === auth.currentUser.uid) mHTML += `
-                        <div class="glass-card">
-                            <h3>${r.name}</h3><p style="margin-bottom:15px; color:#a1a1aa">ID: ${id}</p>
-                            <div style="display:flex;gap:10px;">
-                                <button class="btn-primary" tabindex="0" onclick="joinRoom('${id}')">Enter</button>
-                                <button class="btn-danger" tabindex="0" onclick="deleteRoom('${id}')">Delete</button>
-                            </div>
-                        </div>`;
-                });
-                document.getElementById('public-rooms-list').innerHTML = pHTML || '<div class="empty-placeholder">No public rooms.</div>';
-                document.getElementById('my-rooms-list').innerHTML = mHTML || '<div class="empty-placeholder">No rooms hosted.</div>';
-                lucide.createIcons();
-            });
-        }
-        lucide.createIcons();
+        // Initialize App
+        renderApp();
     </script>
 </body>
 </html>
