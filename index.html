@@ -3,321 +3,474 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport settings specifically for TV to prevent zoom -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart TV OTT Interface</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Smart TV OTT Native</title>
     <style>
-        /* TV UI Specific Resets and Styles */
+        /* =======================================================================
+           VANILLA CSS - OPTIMIZED FOR TV (NO TAILWIND OR EXTERNAL LIBRARIES)
+           ======================================================================= */
         body {
             margin: 0;
             padding: 0;
             background-color: #141414;
-            color: white;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden; /* Prevent native scrolling, handle it via transforms */
-            user-select: none; /* Prevent text selection on TV */
+            color: #ffffff;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Crucial for TV: No native browser scrollbars */
+            user-select: none; /* Crucial for TV: Cannot highlight text */
         }
 
-        /* Hide scrollbars completely for TV apps */
-        ::-webkit-scrollbar {
-            display: none;
+        /* --- HERO BANNER --- */
+        #hero {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 70vh;
+            z-index: 1;
+            background-color: #000;
         }
 
-        /* Hero Image Gradient Fades */
-        .hero-gradient-bottom {
-            background: linear-gradient(to top, #141414 0%, rgba(20,20,20,0.4) 50%, transparent 100%);
-        }
-        .hero-gradient-right {
-            background: linear-gradient(to right, #141414 0%, rgba(20,20,20,0.8) 40%, transparent 100%);
-        }
-
-        /* Smooth UI Transitions */
-        .row-container {
-            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
-        }
-        .row-track {
-            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
-        }
-        .item-card {
-            transition: transform 0.3s ease, opacity 0.3s ease;
+        #hero-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             opacity: 0.6;
-        }
-        
-        /* The Focused State (What the user is currently selecting) */
-        .item-card.focused {
-            transform: scale(1.15);
-            opacity: 1;
-            z-index: 50;
-            border: 4px solid white;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
-            border-radius: 0.5rem;
+            transition: opacity 0.5s ease;
         }
 
-        /* Spinner for video player */
-        .loader {
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-left-color: #E50914;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
+        /* Gradients to blend image into the background */
+        .hero-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 100%);
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .hero-fade-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            background: linear-gradient(to top, #141414 0%, transparent 100%);
+        }
+
+        /* Hero Text Content */
+        #hero-content {
+            position: absolute;
+            bottom: 10%;
+            left: 5vw;
+            width: 50vw;
+            z-index: 2;
+        }
+
+        #hero-title {
+            font-size: 4vw;
+            font-weight: 800;
+            margin: 0 0 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+        }
+
+        .hero-metadata {
+            display: flex;
+            align-items: center;
+            font-size: 1.2vw;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .meta-match { color: #46d369; margin-right: 15px; }
+        .meta-year, .meta-duration { color: #a3a3a3; margin-right: 15px; }
+        .meta-rating { border: 1px solid #a3a3a3; padding: 2px 6px; border-radius: 3px; color: #a3a3a3; margin-right: 15px; font-size: 1vw;}
+
+        #hero-desc {
+            font-size: 1.2vw;
+            line-height: 1.5;
+            color: #d2d2d2;
+            margin-bottom: 25px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* --- GALLERY / ROWS (The Grid) --- */
+        #gallery {
+            position: fixed;
+            /* Start gallery below the hero text */
+            top: 55vh; 
+            left: 0;
+            width: 100vw;
+            z-index: 10;
+            /* hardware acceleration for smooth TV scrolling */
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+
+        .row {
+            margin-bottom: 4vh;
+            padding-left: 5vw;
+        }
+
+        .row-title {
+            font-size: 1.5vw;
+            font-weight: bold;
+            color: #808080;
+            margin: 0 0 15px 0;
+            transition: color 0.3s ease;
+        }
+
+        .row.active-row .row-title {
+            color: #ffffff; /* Highlight row title when user is on it */
+        }
+
+        .row-track {
+            display: flex;
+            flex-direction: row;
+            /* hardware acceleration */
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+
+        /* --- INDIVIDUAL ITEM CARDS --- */
+        .item-card {
+            width: 18vw;
+            height: 10.1vw; /* 16:9 aspect ratio */
+            background-color: #333;
+            border-radius: 0.4vw;
+            margin-right: 1vw;
+            flex-shrink: 0;
+            position: relative;
+            box-sizing: border-box;
+            border: 0.3vw solid transparent; /* invisible border for spacing */
+            transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1), border-color 0.3s;
+        }
+
+        .item-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0.2vw;
+        }
+
+        /* ** THE FOCUSED STATE (Crucial for TV Remote Control) ** */
+        .item-card.focused {
+            transform: scale(1.15); /* Pop out */
+            border-color: #ffffff; /* White border */
+            z-index: 50;
+            box-shadow: 0 1vw 2vw rgba(0,0,0,0.8);
+        }
+
+        /* ** CLICK / SELECT ANIMATION ** */
+        .item-card.clicked {
+            transform: scale(0.95);
+            border-color: #e50914; /* Flash red on click */
+            transition: transform 0.1s ease, border-color 0.1s ease;
+        }
+
+        /* --- VIDEO PLAYER OVERLAY --- */
+        #player {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .player-info {
+            position: absolute;
+            top: 5vh;
+            left: 5vw;
+            color: rgba(255,255,255,0.7);
+            font-size: 1.5vw;
+        }
+
+        .spinner {
+            width: 5vw;
+            height: 5vw;
+            border: 0.5vw solid rgba(255,255,255,0.2);
+            border-top-color: #e50914;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        #player-title {
+            font-size: 2vw;
+            font-weight: 300;
+        }
+
     </style>
 </head>
 <body>
 
     <!-- HERO SECTION -->
-    <div id="hero" class="relative w-full h-[65vh] transition-all duration-500 ease-in-out">
-        <div class="absolute inset-0">
-            <img id="hero-img" src="" alt="Hero" class="w-full h-full object-cover opacity-70 transition-opacity duration-500">
-            <div class="absolute inset-0 hero-gradient-right w-[70%]"></div>
-            <div class="absolute inset-0 hero-gradient-bottom"></div>
-        </div>
-
-        <div class="absolute bottom-[15%] left-[4%] w-[50%] z-10">
-            <h1 id="hero-title" class="text-5xl md:text-7xl font-bold mb-4 drop-shadow-lg tracking-tight">Title</h1>
-            
-            <div class="flex items-center space-x-4 text-sm md:text-base font-semibold mb-4 text-gray-300">
-                <span id="hero-match" class="text-green-500">98% Match</span>
-                <span id="hero-year">2024</span>
-                <span id="hero-rating" class="border border-gray-500 px-1 rounded text-xs">TV-MA</span>
-                <span id="hero-duration">2h 15m</span>
+    <div id="hero">
+        <img id="hero-img" src="" alt="Hero">
+        <div class="hero-vignette"></div>
+        <div class="hero-fade-bottom"></div>
+        
+        <div id="hero-content">
+            <h1 id="hero-title">Loading...</h1>
+            <div class="hero-metadata">
+                <span id="hero-match" class="meta-match">98% Match</span>
+                <span id="hero-year" class="meta-year">2024</span>
+                <span id="hero-rating" class="meta-rating">TV-MA</span>
+                <span id="hero-duration" class="meta-duration">2h 10m</span>
             </div>
-
-            <p id="hero-desc" class="text-lg md:text-xl text-gray-200 drop-shadow-md line-clamp-3 max-w-2xl mb-8">
-                Description goes here.
-            </p>
-
-            <div class="flex space-x-4">
-                <div class="flex items-center bg-white text-black px-6 py-2 rounded text-lg font-bold">
-                    <svg class="w-6 h-6 mr-2 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Play
-                </div>
-            </div>
+            <p id="hero-desc">...</p>
         </div>
     </div>
 
-    <!-- ROWS SECTION -->
-    <div id="app-content" class="relative z-20 pb-20 row-container pl-[4%]">
-        <!-- Rows will be injected here by JavaScript -->
-    </div>
+    <!-- GALLERY SECTION (Inject via JS) -->
+    <div id="gallery"></div>
 
-    <!-- FULLSCREEN PLAYER OVERLAY -->
-    <div id="player" class="fixed inset-0 bg-black z-[100] hidden flex-col items-center justify-center">
-        <div class="absolute top-8 left-8 bg-white/20 px-4 py-2 rounded text-white font-bold backdrop-blur">
-            Press BACK or ESC to exit
-        </div>
-        <div class="loader mb-6"></div>
-        <h2 id="player-title" class="text-3xl font-light text-white mb-2">Loading Stream...</h2>
-    </div>
-
-    <!-- REMOTE HINT -->
-    <div class="fixed bottom-6 right-6 flex items-center space-x-2 text-gray-400 z-50 bg-black/80 px-4 py-2 rounded-full border border-gray-800">
-        <span class="text-sm">Use Arrow Keys to navigate, Enter to play</span>
+    <!-- PLAYER SECTION -->
+    <div id="player">
+        <div class="player-info">Press RETURN/BACK on Remote to exit</div>
+        <div class="spinner"></div>
+        <h2 id="player-title">Loading Video...</h2>
     </div>
 
     <script>
-        // --- 1. MOCK DATA GENERATION ---
-        const images = [
-            'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1616530940355-351fabd9524b?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80'
+        /* =======================================================================
+           TV APPLICATION LOGIC (No external dependencies)
+           ======================================================================= */
+
+        // 1. DATA
+        const imageAssets = [
+            'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1280&q=80',
+            'https://images.unsplash.com/photo-1616530940355-351fabd9524b?auto=format&fit=crop&w=1280&q=80',
+            'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=1280&q=80',
+            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1280&q=80',
+            'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=1280&q=80',
+            'https://images.unsplash.com/photo-1505322022379-7c3353ee6291?auto=format&fit=crop&w=1280&q=80'
         ];
 
-        const generateItems = (category, count, startId) => {
+        function createMockData(category, count) {
             let items = [];
-            for (let i = 0; i < count; i++) {
+            for(let i=0; i<count; i++) {
                 items.push({
-                    id: startId + i,
-                    title: `${category} Movie ${i + 1}`,
-                    description: `This is an amazing ${category} movie. Enjoy the immersive experience right on your Smart TV screen using your D-Pad remote.`,
-                    imageUrl: images[(startId + i) % images.length],
+                    title: `${category} Title ${i+1}`,
+                    desc: `This is an amazing ${category} movie designed to be viewed on your big screen TV. Use your remote control to navigate and hit the select button to play.`,
+                    img: imageAssets[Math.floor(Math.random() * imageAssets.length)],
                     match: Math.floor(Math.random() * 20) + 80,
                     year: 2020 + Math.floor(Math.random() * 5),
                     rating: ['TV-MA', 'TV-14', 'PG-13'][Math.floor(Math.random() * 3)],
-                    duration: `${Math.floor(Math.random() * 2) + 1}h ${Math.floor(Math.random() * 59)}m`
+                    duration: `1h ${Math.floor(Math.random() * 59)}m`
                 });
             }
             return items;
-        };
+        }
 
-        const CATEGORIES = [
-            { title: 'Trending Now', items: generateItems('Trending', 12, 100) },
-            { title: 'Action & Adventure', items: generateItems('Action', 15, 200) },
-            { title: 'Sci-Fi Hits', items: generateItems('Sci-Fi', 10, 300) },
-            { title: 'Comedy Specials', items: generateItems('Comedy', 14, 400) },
-            { title: 'Award Winners', items: generateItems('Drama', 8, 500) }
+        const data = [
+            { title: "Top Picks for You", items: createMockData("Top Pick", 12) },
+            { title: "Action Thrillers", items: createMockData("Action", 15) },
+            { title: "Sci-Fi & Fantasy", items: createMockData("Sci-Fi", 10) },
+            { title: "Stand-Up Comedy", items: createMockData("Comedy", 14) },
+            { title: "Documentaries", items: createMockData("Doc", 8) }
         ];
 
-        // --- 2. STATE MANAGEMENT ---
-        let currentRow = 0;
-        let currentCol = 0;
+        // 2. STATE VARIABLES
+        let activeRow = 0;
+        let activeCol = 0;
         let isPlaying = false;
 
-        // Constants for UI calculations
-        const ITEM_WIDTH = 280; // Match w-[280px]
-        const ITEM_MARGIN = 16; // Match space-x-4
-        const ROW_HEIGHT = 200; // Approximate height of a row + margins
+        // Measurement variables (used for translate3d calculations)
+        // VW/VH units are used in CSS, we approximate them in JS based on window size
+        let itemWidthWithMargin = 0;
+        let rowHeightWithMargin = 0;
 
-        // --- 3. DOM ELEMENTS ---
-        const appContent = document.getElementById('app-content');
+        // 3. DOM ELEMENTS
+        const galleryEl = document.getElementById('gallery');
         const heroImg = document.getElementById('hero-img');
         const heroTitle = document.getElementById('hero-title');
-        const heroDesc = document.getElementById('hero-desc');
         const heroMatch = document.getElementById('hero-match');
         const heroYear = document.getElementById('hero-year');
         const heroRating = document.getElementById('hero-rating');
         const heroDuration = document.getElementById('hero-duration');
+        const heroDesc = document.getElementById('hero-desc');
         const player = document.getElementById('player');
         const playerTitle = document.getElementById('player-title');
 
-        // --- 4. RENDER UI ---
-        function renderApp() {
+        // 4. INITIALIZE APP
+        function buildUI() {
             let html = '';
-            CATEGORIES.forEach((category, rIndex) => {
-                html += `
-                    <div class="mb-10" id="row-wrapper-${rIndex}">
-                        <h2 id="row-title-${rIndex}" class="text-xl md:text-2xl font-bold mb-3 text-gray-400 transition-colors duration-300">${category.title}</h2>
-                        <div class="relative w-full overflow-visible">
-                            <div id="row-track-${rIndex}" class="flex space-x-4 pt-4 pb-8 row-track w-max">
-                `;
-                
-                category.items.forEach((item, cIndex) => {
-                    html += `
-                        <div id="item-${rIndex}-${cIndex}" class="item-card relative flex-none w-[280px] aspect-video bg-gray-800 rounded-md">
-                            <img src="${item.imageUrl}" class="w-full h-full object-cover rounded-md" alt="${item.title}">
-                        </div>
-                    `;
-                });
-
-                html += `</div></div></div>`;
-            });
-            appContent.innerHTML = html;
-            updateFocus();
+            for (let r = 0; r < data.length; r++) {
+                html += `<div class="row" id="row-${r}">
+                            <div class="row-title">${data[r].title}</div>
+                            <div class="row-track" id="track-${r}">`;
+                for (let c = 0; c < data[r].items.length; c++) {
+                    html += `<div class="item-card" id="item-${r}-${c}">
+                                <img src="${data[r].items[c].img}" alt="thumbnail">
+                             </div>`;
+                }
+                html += `   </div>
+                         </div>`;
+            }
+            galleryEl.innerHTML = html;
+            calculateDimensions();
+            focusItem(0, 0);
         }
 
-        // --- 5. UPDATE FOCUS & UI ---
-        function updateFocus() {
-            // Remove previous focus
-            document.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
-            
-            // Manage Row Title Colors
-            document.querySelectorAll('h2').forEach(el => {
-                el.classList.remove('text-white');
-                el.classList.add('text-gray-400');
-            });
+        function calculateDimensions() {
+            // Calculate pixel dimensions for sliding math
+            const vw = window.innerWidth / 100;
+            const vh = window.innerHeight / 100;
+            itemWidthWithMargin = (18 * vw) + (1 * vw); // 18vw width + 1vw margin
+            rowHeightWithMargin = (10.1 * vw) + (4 * vh) + (1.5 * vw) + 15; // height + margin + title
+        }
 
-            // Set new focus
-            const targetItem = document.getElementById(`item-${currentRow}-${currentCol}`);
-            const targetTitle = document.getElementById(`row-title-${currentRow}`);
+        // 5. FOCUS LOGIC
+        function focusItem(row, col) {
+            // Remove previous focus
+            const prevFocused = document.querySelector('.item-card.focused');
+            if (prevFocused) prevFocused.classList.remove('focused');
             
-            if (targetItem) targetItem.classList.add('focused');
-            if (targetTitle) {
-                targetTitle.classList.remove('text-gray-400');
-                targetTitle.classList.add('text-white');
-            }
+            const prevActiveRow = document.querySelector('.row.active-row');
+            if (prevActiveRow) prevActiveRow.classList.remove('active-row');
+
+            // Apply new focus
+            const targetEl = document.getElementById(`item-${row}-${col}`);
+            if (targetEl) targetEl.classList.add('focused');
+            
+            const targetRowEl = document.getElementById(`row-${row}`);
+            if (targetRowEl) targetRowEl.classList.add('active-row');
+
+            // Update state
+            activeRow = row;
+            activeCol = col;
 
             // Update Hero Banner
-            const activeData = CATEGORIES[currentRow].items[currentCol];
-            heroImg.style.opacity = '0'; // Fade out
-            
+            const currentData = data[row].items[col];
+            heroImg.style.opacity = '0';
             setTimeout(() => {
-                heroImg.src = activeData.imageUrl;
-                heroTitle.textContent = activeData.title;
-                heroDesc.textContent = activeData.description;
-                heroMatch.textContent = `${activeData.match}% Match`;
-                heroYear.textContent = activeData.year;
-                heroRating.textContent = activeData.rating;
-                heroDuration.textContent = activeData.duration;
-                heroImg.style.opacity = '0.7'; // Fade in
-            }, 150);
+                heroImg.src = currentData.img;
+                heroTitle.innerText = currentData.title;
+                heroMatch.innerText = `${currentData.match}% Match`;
+                heroYear.innerText = currentData.year;
+                heroRating.innerText = currentData.rating;
+                heroDuration.innerText = currentData.duration;
+                heroDesc.innerText = currentData.desc;
+                heroImg.style.opacity = '0.6';
+            }, 300); // Wait for fade out
 
-            // Calculate Spatial Scrolling
+            // 6. SPATIAL SCROLLING (Hardware accelerated via translate3d)
             
-            // 1. Horizontal Scroll (Move the track)
-            const track = document.getElementById(`row-track-${currentRow}`);
-            // Move item to the left edge if it's past the first item
-            const xOffset = currentCol > 0 ? (currentCol * (ITEM_WIDTH + ITEM_MARGIN)) - 40 : 0;
-            track.style.transform = `translateX(-${xOffset}px)`;
+            // Move Row Track Horizontally
+            const track = document.getElementById(`track-${row}`);
+            // Move track so focused item is the second item visually (unless it's the first item)
+            const xOffset = col > 0 ? (col - 1) * itemWidthWithMargin : 0;
+            track.style.transform = `translate3d(-${xOffset}px, 0, 0)`;
 
-            // 2. Vertical Scroll (Move the whole content area up)
-            // If we go past the first row, shift everything up so the focused row stays in the center
-            const yOffset = currentRow > 0 ? (currentRow * ROW_HEIGHT) - 50 : 0;
-            appContent.style.transform = `translateY(-${yOffset}px)`;
+            // Move Entire Gallery Vertically
+            // Move gallery up so the active row stays below the hero banner
+            const yOffset = row * rowHeightWithMargin;
+            galleryEl.style.transform = `translate3d(0, -${yOffset}px, 0)`;
         }
 
-        // --- 6. HANDLE REMOTE CONTROL (KEYBOARD) EVENTS ---
-        window.addEventListener('keydown', (e) => {
-            const key = e.key;
+        // 7. REMOTE CONTROL / KEYBOARD HANDLING
+        window.addEventListener('keydown', function(e) {
             const keyCode = e.keyCode;
 
-            // Samsung Tizen specific 'Return/Back' key code is 10009
-            const isBackKey = key === 'Escape' || key === 'Backspace' || keyCode === 10009;
+            // SMART TV SPECIFIC KEY CODES
+            const KEY_LEFT = 37;
+            const KEY_UP = 38;
+            const KEY_RIGHT = 39;
+            const KEY_DOWN = 40;
+            const KEY_ENTER = 13; // OK / Select button
+            
+            // TV Specific Back Buttons
+            const KEY_TIZEN_BACK = 10009; // Samsung Tizen
+            const KEY_WEBOS_BACK = 461;   // LG WebOS
+            const KEY_ESC = 27;           // Standard Escape (Testing on PC)
+            const KEY_BACKSPACE = 8;      // Standard Backspace
 
+            // Player State Handling
             if (isPlaying) {
-                if (isBackKey) {
+                if (keyCode === KEY_TIZEN_BACK || keyCode === KEY_WEBOS_BACK || keyCode === KEY_ESC || keyCode === KEY_BACKSPACE) {
+                    // STOP VIDEO
                     isPlaying = false;
-                    player.classList.add('hidden');
-                    player.classList.remove('flex');
+                    player.style.display = 'none';
                     e.preventDefault();
                 }
-                return; // Disable other navigation while playing
+                return; // Stop processing other keys while playing
             }
 
-            // Prevent default browser scrolling for arrow keys
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+            let newRow = activeRow;
+            let newCol = activeCol;
+            let handled = false;
+
+            if (keyCode === KEY_LEFT) {
+                if (newCol > 0) newCol--;
+                handled = true;
+            } 
+            else if (keyCode === KEY_RIGHT) {
+                if (newCol < data[activeRow].items.length - 1) newCol++;
+                handled = true;
+            } 
+            else if (keyCode === KEY_UP) {
+                if (newRow > 0) {
+                    newRow--;
+                    // Clamp column to new row's length
+                    if (newCol > data[newRow].items.length - 1) newCol = data[newRow].items.length - 1;
+                }
+                handled = true;
+            } 
+            else if (keyCode === KEY_DOWN) {
+                if (newRow < data.length - 1) {
+                    newRow++;
+                    if (newCol > data[newRow].items.length - 1) newCol = data[newRow].items.length - 1;
+                }
+                handled = true;
+            } 
+            else if (keyCode === KEY_ENTER) {
+                // VISUAL CLICK EFFECT
+                const focusedEl = document.getElementById(`item-${activeRow}-${activeCol}`);
+                focusedEl.classList.add('clicked');
+                
+                setTimeout(() => {
+                    focusedEl.classList.remove('clicked');
+                    
+                    // START VIDEO
+                    isPlaying = true;
+                    playerTitle.innerText = `Loading: ${data[activeRow].items[activeCol].title}`;
+                    player.style.display = 'flex';
+                }, 150); // wait for click animation to finish
+
+                handled = true;
+            }
+
+            // Prevent default browser scrolling
+            if (handled) {
                 e.preventDefault();
             }
 
-            let changed = false;
-
-            switch (key) {
-                case 'ArrowUp':
-                    if (currentRow > 0) {
-                        currentRow--;
-                        changed = true;
-                    }
-                    break;
-                case 'ArrowDown':
-                    if (currentRow < CATEGORIES.length - 1) {
-                        currentRow++;
-                        changed = true;
-                    }
-                    break;
-                case 'ArrowLeft':
-                    if (currentCol > 0) {
-                        currentCol--;
-                        changed = true;
-                    }
-                    break;
-                case 'ArrowRight':
-                    if (currentCol < CATEGORIES[currentRow].items.length - 1) {
-                        currentCol++;
-                        changed = true;
-                    }
-                    break;
-                case 'Enter':
-                    // Play Video
-                    isPlaying = true;
-                    playerTitle.textContent = `Loading Stream: ${CATEGORIES[currentRow].items[currentCol].title}`;
-                    player.classList.remove('hidden');
-                    player.classList.add('flex');
-                    break;
-            }
-
-            if (changed) {
-                // Ensure column doesn't exceed row length if we jumped to a shorter row
-                const maxCol = CATEGORIES[currentRow].items.length - 1;
-                if (currentCol > maxCol) currentCol = maxCol;
-                
-                updateFocus();
+            // Update UI if moved
+            if (newRow !== activeRow || newCol !== activeCol) {
+                focusItem(newRow, newCol);
             }
         });
 
-        // Initialize App
-        renderApp();
+        // Recalculate dimensions on window resize
+        window.addEventListener('resize', calculateDimensions);
+
+        // Start
+        buildUI();
     </script>
 </body>
 </html>
+
+
